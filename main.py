@@ -5,63 +5,39 @@ import feedparser
 TOKEN = '8883687306:AAF-qJIwQ0Js099LYL9rr_dHu1S-tIunEJ4'
 CHAT_ID = '-1004455970098'
 
-# استفاده از فید خبری خبرگزاری‌های معتبر فارسی برای پوشش اخبار سیاسی و تحولات
 RSS_URL = 'https://www.radiofarda.com/api/z_yqteiv-q'
-
-HISTORY_FILE = 'sent_news.txt'
-
-# کلمات کلیدی برای فیلتر دقیق اخبار سیاسی، نظامی و جنگی
-KEYWORDS = ['ایران', 'آمریکا', 'جنگ', 'تحریم', 'نظامی', 'مذاکره', 'موشک', 'سیاسی', 'توافق', 'پدافند', 'حمله']
-
-def load_sent_links():
-    if not os.path.exists(HISTORY_FILE):
-        return set()
-    with open(HISTORY_FILE, 'r', encoding='utf-8') as f:
-        return set(line.strip() for line in f if line.strip())
-
-def save_sent_link(link):
-    with open(HISTORY_FILE, 'a', encoding='utf-8') as f:
-        f.write(link + '\n')
-
-def send_telegram_message(text):
-    url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
-    payload = {
-        'chat_id': CHAT_ID,
-        'text': text,
-        'parse_mode': 'HTML',
-        'disable_web_page_preview': False
-    }
-    response = requests.post(url, data=payload)
-    print("Telegram Response Status:", response.status_code)
-    print("Telegram Response Body:", response.text)
 
 def main():
     feed = feedparser.parse(RSS_URL)
     if not feed.entries:
-        print("خطایی در دریافت اخبار رخ داد یا فید خالی است.")
+        print("خطا: هیچ خبری دریافت نشد.")
         return
 
-    sent_links = load_sent_links()
+    # برداشتن اولین خبر برای تست مستقیم
+    latest_entry = feed.entries[0]
+    title = latest_entry.title
+    link = latest_entry.link
 
-    # بررسی اخبار جدید
-    for entry in feed.entries:
-        link = entry.link
-        title = entry.title
-        
-        # چک کردن کلمات کلیدی سیاسی/جنگی
-        if any(keyword in title for keyword in KEYWORDS):
-            if link not in sent_links:
-                message = (
-                    f"🚨 <b>فوری | اخبار سیاسی و تحولات:</b>\n\n"
-                    f"{title}\n\n"
-                    f"🔗 {link}\n\n"
-                    f"━━━━━━━━━━━━━━━\n"
-                    f"@TIIME_NEWS | تایم نیوز"
-                )
+    message = (
+        f"🚨 <b>تست ارسال مستقیم:</b>\n\n"
+        f"{title}\n\n"
+        f"🔗 {link}\n\n"
+        f"━━━━━━━━━━━━━━━\n"
+        f"@TIIME_NEWS | تایم نیوز"
+    )
 
-                send_telegram_message(message)
-                save_sent_link(link)
-                break  # ارسال تنها یک خبر در هر نوبت برای جلوگیری از اسپم
+    url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
+    payload = {
+        'chat_id': CHAT_ID,
+        'text': message,
+        'parse_mode': 'HTML'
+    }
+    
+    response = requests.post(url, data=payload)
+    
+    # چاپ پاسخ دقیق سرور تلگرام در لاگ گیت‌هاب
+    print("STATUS CODE:", response.status_code)
+    print("RESPONSE BODY:", response.text)
 
 if __name__ == '__main__':
     main()
